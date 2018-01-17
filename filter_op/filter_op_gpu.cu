@@ -134,7 +134,7 @@ void PermutohedralComputeKernelLauncher(const float* input,
   int F = n_features;
   int M = n_vertices;
 
-  // TODO: this can be allocated only once during the initialization
+  // TODO: this can be allocated only once during the initialization (in the op itself)
   float *values;
   float *new_values;
   cudaMalloc((void**)&(values), (M+2)*V*sizeof(float));
@@ -143,7 +143,7 @@ void PermutohedralComputeKernelLauncher(const float* input,
   cudaMemset(new_values, 0, (M+2)*V*sizeof(float));
 
   // TODO: (!!!) add some kind of assertion for the # of classes
-  // and feature dimensionality
+  // and feature dimensionality, for now it is assumed larger then # of
   const int32 bsize = BLOCK_SIZE;
 
   // splatting
@@ -155,10 +155,14 @@ void PermutohedralComputeKernelLauncher(const float* input,
       N, F, V, input, offsets, weights, values);
 
   // blurring
-  dim3 blocks_blur((M-1) / (4*bsize) + 1,
-                   (V-1) / (bsize) + 1,
+  /* dim3 blocks_blur((M-1) / (4*bsize) + 1, */
+  /*                  (V-1) / (bsize) + 1, */
+  /*                  1); */
+  /* dim3 threads_blur(4*bsize, bsize, 1); */
+  dim3 blocks_blur((M-1) / bsize + 1,
+                   (V-1) / bsize + 1,
                    1);
-  dim3 threads_blur(4*bsize, bsize, 1);
+  dim3 threads_blur(bsize, bsize, 1);
   for (int f = reverse ? F : 0; f <= F && f >= 0; reverse ? --f : ++f) {
     PermutohedralBlurKernel<<<blocks_blur,threads_blur, 2*4*bsize>>>(
         f, M, F, V, neighbours, values, new_values);

@@ -1,29 +1,46 @@
 #include "tensorflow/core/framework/op.h"
+#include "tensorflow/core/framework/shape_inference.h"
 #include "tensorflow/core/framework/op_kernel.h"
-
-// #include "tensorflow/core/kernels/fill_functor.h"
-// TODO: for now we assume GOOGLE_CUDA=1 by default
-//#if GOOGLE_CUDA
-// #include "filter_op_gpu.h"
-// #include "tensorflow/core/platform/stream_executor.h"
-//#endif  // GOOGLE_CUDA
 
 #include "permutohedral.h"
 
+using namespace tensorflow;
+using shape_inference::DimensionHandle;
+using shape_inference::InferenceContext;
+using shape_inference::ShapeHandle;
 
 REGISTER_OP("PermutoInit")
 .Input("features: float32")
 .Output("offsets: int32")
 .Output("weights: float32")
-.Output("neighbours: int32");
+.Output("neighbours: int32")
+.SetShapeFn([](InferenceContext* c) {
+    ShapeHandle features;
+    TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 2, &features));
+    DimensionHandle num_dims_out;
+    TF_RETURN_IF_ERROR(c->Add(c->Dim(features, 1), c->MakeDim(1), &num_dims_out));
+    DimensionHandle num_points_out;
+    TF_RETURN_IF_ERROR(c->Multiply(c->Dim(features, 1), c->MakeDim(16), &num_points_out));
+
+    c->set_output(0, c->MakeShape({num_points_out, num_dims_out}));
+    c->set_output(1, c->MakeShape({num_points_out, num_dims_out}));
+    c->set_output(2, c->MakeShape({c->UnknownDim(), num_dims_out, c->MakeDim(2)}));
+    return Status::OK();
+  });
+
 
 REGISTER_OP("PermutoCompute")
 .Input("input: float32")
 .Input("offsets: int32")
 .Input("weights: float32")
 .Input("neighbours: int32")
-.Output("output: float32");// TODO: add shape attribute?
-
+.Output("output: float32")
+.SetShapeFn([](InferenceContext* c) {
+    ShapeHandle unused;
+    TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 2, &unused));
+    c->set_output(0, c->input(0));
+    return Status::OK();
+  });
 
 using tensorflow::int32;
 
@@ -41,7 +58,6 @@ void PermutohedralComputeKernelLauncher(const float* input,
                                         int n_vertices,
                                         bool reverse,
                                         float* output);
-
 
 /**
  * Op that does initialization of weights, offsets and neighbours
@@ -71,12 +87,9 @@ public:
     Tensor* weights = nullptr;
     Tensor* neighbours = nullptr;
 
-    // TODO: this depends on whether it is sse or not
-
     // TODO: this is done dynamically, e.g. split init() into several functions
     int32 *nbs;
     int num_vertices;
-
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(0,
@@ -91,13 +104,12 @@ public:
                             offsets->flat<int32>().data(), weights->flat<T>().data(),
                             nbs, num_vertices);
 
-
     OP_REQUIRES_OK(context,
                    context->allocate_output(2,
                                             TensorShape({num_vertices, num_dims+1, 2}),
                                             &neighbours));
 
-    // TODO: copying stuff
+    // TODO: is copying necessary?
     memcpy(neighbours->flat<int32>().data(), nbs, sizeof(int32) * num_vertices*(num_dims+1)*2);
     delete [] nbs;
   }
@@ -105,9 +117,8 @@ public:
 
 
 /**
- * This op does the actual high-dimensional filtering given pre-computed
- * lattice
- * TODO: this is CPU-only, merge it into a single op
+ * This op does the actual high-dimensional filtering given pre-computed lattice:
+ * CPU-SSE implementation
  */
 template <typename T>
 class PermutoComputeCPUOp : public OpKernel {
@@ -142,12 +153,15 @@ public:
                                weights.flat<T>().data(),
                                neighbours.flat<int32>().data(),
                                num_values, num_points, num_features, num_vertices,
-                               output->flat<T>().data());
+                               output->flat<T>().data(),
+                               false);
   }
 };
 
 
-// TODO: change this ambiguous name, it should be a template of PermutoCompute
+/**
+ * High-dimensional filtering on top given the lattice: GPU implementation
+ */
 template <typename T>
 class PermutoComputeGPUOp : public OpKernel {
 public:
@@ -187,12 +201,9 @@ public:
                                        false,
                                        output->flat<T>().data());
 
-    LOG(INFO) << "just finished";
   }
 };
 
-
-// TODO: we also need to register shape
 REGISTER_KERNEL_BUILDER(Name("PermutoInit")
                         .Device(DEVICE_CPU),
                         PermutoInitOp<float>);
