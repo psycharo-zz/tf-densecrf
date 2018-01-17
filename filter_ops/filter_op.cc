@@ -35,6 +35,7 @@ REGISTER_OP("PermutoCompute")
 .Input("weights: float32")
 .Input("neighbours: int32")
 .Output("output: float32")
+.Attr("reverse: bool = false")
 .SetShapeFn([](InferenceContext* c) {
     ShapeHandle unused;
     TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 2, &unused));
@@ -68,8 +69,8 @@ void PermutohedralComputeKernelLauncher(const float* input,
 template <typename T>
 class PermutoInitOp : public OpKernel {
 public:
-  explicit PermutoInitOp(OpKernelConstruction* context) : OpKernel(context) {
-  }
+  explicit PermutoInitOp(OpKernelConstruction* context)
+    : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) {
     const Tensor& features = context->input(0);
@@ -123,8 +124,10 @@ public:
 template <typename T>
 class PermutoComputeCPUOp : public OpKernel {
 public:
-  explicit PermutoComputeCPUOp(OpKernelConstruction* context) : OpKernel(context) {
-
+  explicit PermutoComputeCPUOp(OpKernelConstruction* context)
+    : OpKernel(context) {
+    OP_REQUIRES_OK(context,
+                   context->GetAttr("reverse", &reverse_));
   }
 
   void Compute(OpKernelContext* context) {
@@ -154,8 +157,10 @@ public:
                                neighbours.flat<int32>().data(),
                                num_values, num_points, num_features, num_vertices,
                                output->flat<T>().data(),
-                               false);
+                               reverse_);
   }
+private:
+  bool reverse_;
 };
 
 
@@ -165,7 +170,10 @@ public:
 template <typename T>
 class PermutoComputeGPUOp : public OpKernel {
 public:
-  explicit PermutoComputeGPUOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit PermutoComputeGPUOp(OpKernelConstruction* context)
+    : OpKernel(context) {
+    OP_REQUIRES_OK(context,
+                   context->GetAttr("reverse", &reverse_));
   }
 
   void Compute(OpKernelContext* context) override {
@@ -198,10 +206,12 @@ public:
                                        n_points,
                                        n_features,
                                        n_vertices,
-                                       false,
+                                       reverse_,
                                        output->flat<T>().data());
 
   }
+private:
+  bool reverse_;
 };
 
 REGISTER_KERNEL_BUILDER(Name("PermutoInit")

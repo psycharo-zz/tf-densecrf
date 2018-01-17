@@ -1,8 +1,12 @@
 # tf-densecrf
 
-DenseCRF in TensorFlow: high-dimensional filtering with GPU kernels.
+## DenseCRF in TensorFlow
 
-First, build the op with `cd filter_op ; make `.
+Efficient mean-field inference and learning in dense CRFs.
+This repository contains both CPU and GPU implementations of
+high-dimensional filtering ops using permutohedral lattice.
+
+First, build the op with `cd filter_ops ; make `.
 Make sure `CUDA_HOME` is set as well as appropriate flags in `filter_op/Makefile`.
 
 Then, see the notebook `op_test.ipynb` for an example.
@@ -11,5 +15,3 @@ Tested on:
 - Python 3.6
 - TensorFlow 1.4.1
 - Titan X Pascal
-
-Currently only forward pass is implemented.
