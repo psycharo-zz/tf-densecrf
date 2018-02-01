@@ -101,6 +101,7 @@ public:
                                             TensorShape({num_points*16, num_dims+1}),
                                             &weights));
 
+    // NOTE: init() does not seem to work well
     permutohedral::init_sse(features.flat<T>().data(), num_points, num_dims,
                             offsets->flat<int32>().data(), weights->flat<T>().data(),
                             nbs, num_vertices);
@@ -143,10 +144,10 @@ public:
 
     Tensor* output;
 
-    int num_values = input.shape().dim_size(1);
-    int num_points = input.shape().dim_size(0);
-    int num_features = neighbours.shape().dim_size(1)-1;
-    int num_vertices = neighbours.shape().dim_size(0);
+    int n_values = input.shape().dim_size(1);
+    int n_points = input.shape().dim_size(0);
+    int n_features = neighbours.shape().dim_size(1)-1;
+    int n_vertices = neighbours.shape().dim_size(0);
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, input.shape(), &output));
@@ -155,7 +156,7 @@ public:
                                offsets.flat<int32>().data(),
                                weights.flat<T>().data(),
                                neighbours.flat<int32>().data(),
-                               num_values, num_points, num_features, num_vertices,
+                               n_values, n_points, n_features, n_vertices,
                                output->flat<T>().data(),
                                reverse_);
   }
@@ -202,13 +203,9 @@ public:
                                        offsets.flat<int32>().data(),
                                        weights.flat<T>().data(),
                                        neighbours.flat<int32>().data(),
-                                       n_values,
-                                       n_points,
-                                       n_features,
-                                       n_vertices,
+                                       n_values, n_points, n_features, n_vertices,
                                        reverse_,
                                        output->flat<T>().data());
-
   }
 private:
   bool reverse_;

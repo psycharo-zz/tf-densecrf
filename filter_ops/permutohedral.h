@@ -11,7 +11,10 @@ void init_sse(const float* features, int num_points, int num_dims,
               int32* offsets, float* weights,
               int32*& neighbours, int &num_vertices);
 
-// compute the convolution of `input` with of size `n_values x n_values`
+/** compute the convolution of `input` with of size `n_values x n_values`
+ * reverse - whether to perform blurring in reverse order
+ * add - whether to overwrite or add to the output
+ */
 void compute_sse(const float* input,
                  const int32* offsets, const float* weights, const int32* neighbours,
                  int num_values, int num_points, int num_dims, int num_vertices,

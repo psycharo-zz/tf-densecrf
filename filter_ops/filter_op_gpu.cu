@@ -173,10 +173,10 @@ void PermutohedralComputeKernelLauncher(const float* input,
   float alpha = 1.0f / (1.0f + powf(2, -F));
 
   // using shared memory (assuming bsize=2)
-  // dim3 blocks_slice((N-1) / bsize + 1,
-  //                   (V-1) / bsize + 1,
-  //                   F / bsize + 1);
-  // dim3 threads_slice(bsize, bsize, bsize);
+  /* dim3 blocks_slice((N-1) / bsize + 1, */
+  /*                   (V-1) / bsize + 1, */
+  /*                   F / bsize + 1); */
+  /* dim3 threads_slice(bsize, bsize, bsize); */
   dim3 blocks_slice((N-1) / bsize + 1,
                     (V-1) / bsize + 1,
                     1);
