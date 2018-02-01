@@ -92,13 +92,14 @@ public:
     int32 *nbs;
     int num_vertices;
 
+    // NOTE: not sure why +16, sse?
     OP_REQUIRES_OK(context,
                    context->allocate_output(0,
-                                            TensorShape({num_points*16, num_dims+1}),
+                                            TensorShape({num_points+16, num_dims+1}),
                                             &offsets));
     OP_REQUIRES_OK(context,
                    context->allocate_output(1,
-                                            TensorShape({num_points*16, num_dims+1}),
+                                            TensorShape({num_points+16, num_dims+1}),
                                             &weights));
 
     // NOTE: init() does not seem to work well
