@@ -12,17 +12,17 @@ CXX=$(HOME)/anaconda3/bin/x86_64-conda_cos6-linux-gnu-g++
 NV_INC?=$(CUDA_HOME)/include
 NV_LIB?=$(CUDA_HOME)/lib64
 
-# TF_INC=$(shell python -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
-# TF_LIB=$(shell python -c 'import tensorflow as tf; print(tf.sysconfig.get_lib())')
-TF_INC=/home/bagautdi/anaconda3/lib/python3.6/site-packages/tensorflow/include
-TF_LIB=/home/bagautdi/anaconda3/lib/python3.6/site-packages/tensorflow
+TF_INC=$(shell python -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
+TF_LIB=$(shell python -c 'import tensorflow as tf; print(tf.sysconfig.get_lib())')
+# NOTE: switch to this when developing
+# TF_INC=$(HOME)/anaconda3/lib/python3.6/site-packages/tensorflow/include
+# TF_LIB=$(HOME)/anaconda3/lib/python3.6/site-packages/tensorflow
 
-# NOTE: this is necessary due to https://github.com/tensorflow/tensorflow/issues/15002
-TF_SRC=/home/bagautdi/src/tensorflow
+# note: this is necessary due to https://github.com/tensorflow/tensorflow/issues/15002
+TF_SRC=$(HOME)/src/tensorflow
 TF_CUDA_FLAGS=-I$(TF_SRC)/third_party/toolchains/gpus/cuda -I$(CUDA_HOME)/../
 
-
-# NOTE: for older gcc might need to remove -D_GLIBCXX_USE_CXX11_ABI=0
+# NOTE: for older gcc it's probably necessary to remove -D_GLIBCXX_USE_CXX11_ABI=0
 $(BUILD)/filter_op.so: $(BUILD)/filter_op.o $(BUILD)/filter_op_gpu.cu.o $(BUILD)/permutohedral.o
 	$(CXX) -O3 -std=c++11 $^ -shared -o $@ -L$(TF_LIB) -ltensorflow_framework -L$(NV_LIB) -lcudart -fPIC -D_GLIBCXX_USE_CXX11_ABI=0
 
